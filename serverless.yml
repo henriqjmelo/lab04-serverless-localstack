@@ -1,0 +1,121 @@
+service: data-processing-service
+
+frameworkVersion: '^3.38.0'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'local'}
+  region: us-east-1
+  
+  environment:
+    TABLE_NAME: ${self:custom.tableName}
+    BUCKET_NAME: ${self:custom.bucketName}
+    TOPIC_ARN: 
+      Ref: DataProcessingTopic
+    AWS_ENDPOINT_URL: ${self:custom.localstack.endpoint}
+  
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            Fn::GetAtt:
+              - ProcessedDataTable
+              - Arn
+        
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:ListBucket
+          Resource:
+            - Fn::GetAtt:
+                - DataProcessingBucket
+                - Arn
+            - Fn::Sub: '${DataProcessingBucket.Arn}/*'
+        
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource:
+            Ref: DataProcessingTopic
+
+custom:
+  tableName: ProcessedData-${self:provider.stage}
+  bucketName: data-processing-bucket-${self:provider.stage}
+  
+  localstack:
+    endpoint: http://localhost:4566
+    stages:
+      - local
+  
+  serverless-offline:
+    httpPort: 3000
+
+plugins:
+  - serverless-localstack
+  - serverless-offline
+
+functions:
+  dataProcessor:
+    handler: src/handlers/dataProcessor.handler
+    description: Processa arquivos CSV do S3
+    events:
+      - s3:
+          bucket: ${self:custom.bucketName}
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: input/
+            - suffix: .csv
+          existing: false
+    timeout: 60
+    memorySize: 256
+
+  createRecord:
+    handler: src/handlers/createRecord.handler
+    description: Cria registros via API REST
+    events:
+      - http:
+          path: records
+          method: post
+          cors: true
+    timeout: 30
+    memorySize: 128
+
+resources:
+  Resources:
+    DataProcessingBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+    
+    ProcessedDataTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    
+    DataProcessingTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: DataProcessingTopic-${self:provider.stage}
+        DisplayName: Data Processing Notifications

@@ -1,0 +1,47 @@
+{
+  "name": "lab04-serverless-localstack",
+  "version": "1.0.0",
+  "description": "Sistema de processamento de dados serverless com LocalStack",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "test": "node scripts/test-pipeline.js",
+    "deploy": "serverless deploy --stage local",
+    "remove": "serverless remove --stage local",
+    "logs": "serverless logs -f dataProcessor --stage local --tail",
+    "invoke": "serverless invoke -f dataProcessor --stage local --path tests/test-event.json",
+    "invoke:api": "serverless invoke -f createRecord --stage local --path tests/test-api.json",
+    "info": "serverless info --stage local"
+  },
+  "keywords": [
+    "serverless",
+    "aws",
+    "lambda",
+    "dynamodb",
+    "s3",
+    "sns",
+    "localstack"
+  ],
+  "author": "PUC Minas - Engenharia de Software",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1693.0",
+    "csv-parser": "^3.2.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/node": "^20.10.6",
+    "eslint": "^8.56.0",
+    "serverless": "^3.40.0",
+    "serverless-localstack": "^0.4.32",
+    "serverless-offline": "^14.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
