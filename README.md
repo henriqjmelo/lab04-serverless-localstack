@@ -98,7 +98,7 @@ npm --version            # 9.0.0+
 ### 1️⃣ Clonar o Repositório
 
 ```bash
-git clone https://github.com/seu-usuario/lab04-serverless-localstack.git
+git clone https://github.com/henriqjmelo/lab04-serverless-localstack.git
 cd lab04-serverless-localstack
 ```
 
